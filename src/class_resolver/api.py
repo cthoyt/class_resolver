@@ -278,6 +278,17 @@ class Resolver(Generic[X]):
                     raise KeywordArgumentError(cls, e.args[0]) from None
                 if any(text in e.args[0] for text in MISSING_ARGS):
                     raise UnexpectedKeywordError(cls) from None
+                if e.args[0].startswith("__init__() got an unexpected keyword argument"):
+                    parameters = {
+                        k: v
+                        for k, v in inspect.signature(cls.__init__).parameters.items()
+                        if k != "self"
+                    }
+                    if parameters:
+                        accept_text = f"Accepts {sorted(parameters)}"
+                    else:
+                        accept_text = "Does not accept parameters."
+                    raise TypeError(f"{cls.__name__}.{e.args[0]}. {accept_text}") from e
                 raise e
 
         # An instance was passed, and it will go through without modification.
