@@ -321,6 +321,10 @@ class TestResolver(unittest.TestCase):
         result_3: Result = runner.invoke(cli, ["--opt", "a"])
         self.assertEqual(A.__name__, result_3.output)
 
+        # Test synonym lookup works correctly
+        result_4: Result = runner.invoke(cli, ["--opt", "asynonym1"])
+        self.assertEqual(A.__name__, result_4.output)
+
     def test_click_option_str(self) -> None:
         """Test the click option."""
 

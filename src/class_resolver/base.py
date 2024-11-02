@@ -237,6 +237,40 @@ class BaseResolver(ABC, Generic[X, Y]):
         else:
             raise ValueError("no default given either from resolver or explicitly")
 
+    def _get_reverse_synonyms(self) -> dict[str, list[str]]:
+        key_to_synonyms: dict[str, list[str]] = {k: [] for k in self.lookup_dict}
+        for synonym, cls in self.synonyms.items():
+            key = self.normalize(cls.__name__)
+            key_to_synonyms[key].append(synonym)
+        return key_to_synonyms
+
+    def _get_click_choice(self) -> click.Choice:
+        import click
+
+        rev = self._get_reverse_synonyms()
+
+        class _Choice(click.Choice):
+            """An extended choice that is aware of synonyms."""
+
+            def get_metavar(self, param: click.Parameter) -> str:
+                """Get the text that shows the choices, including synonyms."""
+                choices_str = ""
+                for key, synonyms in rev.items():
+                    if synonyms:
+                        synonyms_k = "|".join(synonyms)
+                        choices_str += f"\n     - {key} (synonyms: {synonyms_k})"
+                    else:
+                        choices_str += f"\n     - {key}"
+
+                # note that the original implementation in click.Choice
+                # does a check for the param being an argument. In class-resolver,
+                # this is never an option, so it's not kept here
+
+                # Use square braces to indicate an option or optional argument.
+                return f"[{choices_str}\n  ]"
+
+        return _Choice(sorted(self.options), case_sensitive=False)
+
     def get_option(
         self,
         *flags: str,
@@ -259,7 +293,7 @@ class BaseResolver(ABC, Generic[X, Y]):
         # TODO are there better ways to type options?
         return click.option(  # type:ignore
             *flags,
-            type=click.Choice(list(self.lookup_dict), case_sensitive=False),
+            type=self._get_click_choice(),
             default=[key] if kwargs.get("multiple") else key,
             show_default=True,
             callback=None if as_string else make_callback(self.lookup),
