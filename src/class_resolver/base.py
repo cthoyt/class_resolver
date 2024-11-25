@@ -259,7 +259,7 @@ class BaseResolver(ABC, Generic[X, Y]):
         # TODO are there better ways to type options?
         return click.option(  # type:ignore
             *flags,
-            type=click.Choice(list(self.lookup_dict), case_sensitive=False),
+            type=click.Choice(list(self.options), case_sensitive=False),
             default=[key] if kwargs.get("multiple") else key,
             show_default=True,
             callback=None if as_string else make_callback(self.lookup),
